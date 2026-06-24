@@ -25,8 +25,10 @@ const keys: Record<string,boolean> = {
   "ArrowLeft": false,
   "Space": false,
 };
+let bullets: Location[] = [];
 const playerSpeed = 400; // pixels per seconds
 let lastTime = 0;
+let spaceWasDown = false;
 
 function recordDown(e:KeyboardEvent){
   keys[e.code] = true;
@@ -42,6 +44,7 @@ function gameLoop(currentTime: number){
   if (lastTime == 0) lastTime = currentTime;
   const delta = (currentTime - lastTime) / 1000; // pixels per second
   lastTime = currentTime;
+  const spaceDown = keys["Space"];
 
   if (!ctx){
     throw new Error("2d canvas not found");
@@ -55,8 +58,21 @@ function gameLoop(currentTime: number){
 
   if (player.x + dx >= 0 && player.x + player.w + dx <= canvas.width) player.x += dx;
 
+  if (spaceDown && !spaceWasDown) {
+    bullets.push({x: player.x, y: player.y});
+  };
+
+  spaceWasDown = spaceDown;
+
   ctx.fillStyle = "white";
   ctx.fillRect(player.x, player.y, player.w, player.h);
+
+  for (let bullet of bullets) {
+    ctx.fillRect(bullet.x, bullet.y,2, 5);
+    bullet.y -= 1;
+  }
+
+  bullets = bullets.filter((bullet) => bullet.y + 5 > 0);
 
   requestAnimationFrame(gameLoop);
 };
