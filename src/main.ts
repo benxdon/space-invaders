@@ -17,41 +17,48 @@ const ctx = canvas.getContext("2d");
 canvas.width = 600, canvas.height = 600;
 
 // initializing game objects variables
-const player: Location & Size = {x: 0, y: 0, w: 10, h: 10};
+const player: Location & Size = {x: canvas.width/2-5, y: canvas.height-30, w: 20, h: 10};
 const keys: Record<string,boolean> = {
-  "KeyW": false,
   "KeyA": false,
-  "KeyS": false,
   "KeyD": false,
   "ArrowRight": false,
   "ArrowLeft": false,
-  "ArrowUp": false,
-  "ArrowDown": false,
   "Space": false,
 };
+const playerSpeed = 400; // pixels per seconds
+let lastTime = 0;
 
 function recordDown(e:KeyboardEvent){
   keys[e.code] = true;
 };
 function recordUp(e:KeyboardEvent) {
   keys[e.code] = false;
-}''
+};
 
 window.addEventListener("keydown", recordDown);
 window.addEventListener("keyup", recordUp);
 
-function gameLoop(){
+function gameLoop(currentTime: number){
+  if (lastTime == 0) lastTime = currentTime;
+  const delta = (currentTime - lastTime) / 1000; // pixels per second
+  lastTime = currentTime;
+
   if (!ctx){
     throw new Error("2d canvas not found");
   };
+
   ctx.clearRect(0 , 0, canvas.width, canvas.height);
+
+  let dx = 0;
+  if (keys["KeyA"] || keys["ArrowLeft"]) dx -= playerSpeed * delta;
+  if (keys["KeyD"] || keys["ArrowRight"]) dx += playerSpeed * delta;
+
+  if (player.x + dx >= 0 && player.x + player.w + dx <= canvas.width) player.x += dx;
+
   ctx.fillStyle = "white";
   ctx.fillRect(player.x, player.y, player.w, player.h);
-  if (keys["KeyA"] || keys["ArrowLeft"]) player.x -= 5;
-  if (keys["KeyD"] || keys["ArrowRight"]) player.x += 5;
-  if (keys["KeyW"] || keys["ArrowUp"]) player.y -= 5;
-  if (keys["KeyS"] || keys["ArrowDown"]) player.y += 5;
+
   requestAnimationFrame(gameLoop);
 };
 
-gameLoop();
+requestAnimationFrame(gameLoop);
