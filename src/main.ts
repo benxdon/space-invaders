@@ -38,7 +38,9 @@ const bulletSpeed = 200;
 let lastTime = 0;
 let spaceWasDown = false;
 
-const enemies: Enemy[] = [];
+let enemies: Enemy[] = [];
+let enemyDx = 60;
+const ENEMY_DROP = 20;
 const ENEMY_W = 30, ENEMY_H = 20;
 const ROWS = 5, COLS = 8;
 const OFFSET_X = 40, OFFSET_Y = 40; // margin
@@ -82,11 +84,32 @@ function draw(){
   }
 }
 
+function isOverlapping(bullet: Bullet, enemy: Enemy) {
+  let withinX = bullet.x >= enemy.x && bullet.x + bullet.w <= enemy.x + enemy.w;
+  let withinY = bullet.y >= enemy.y && bullet.y + bullet.h <= enemy.y + enemy.h;
+  if (withinX && withinY) return true;
+  return false;
+}
+
+function checkCollisions(){
+  for (let bullet of bullets){
+    for (let enemy of enemies){
+      if (isOverlapping(bullet, enemy)) {
+        bullet.hit = true;
+        enemy.alive = false;
+      }
+    }
+  }
+}
+
 function update(delta: number){
-  let dx = 0;
-  if (keys["KeyA"] || keys["ArrowLeft"]) dx -= playerSpeed * delta;
-  if (keys["KeyD"] || keys["ArrowRight"]) dx += playerSpeed * delta;
-  if (player.x + dx >= 0 && player.x + player.w + dx <= canvas.width) player.x += dx;
+  let playerDx = 0;
+  const hitRight = enemies.some((e) => e.x + e.w + enemyDx * delta >= canvas.width);
+  const hitLeft = enemies.some((e) => e.x + enemyDx * delta <= 0);
+
+  if (keys["KeyA"] || keys["ArrowLeft"]) playerDx -= playerSpeed * delta;
+  if (keys["KeyD"] || keys["ArrowRight"]) playerDx += playerSpeed * delta;
+  if (player.x + playerDx >= 0 && player.x + player.w + playerDx <= canvas.width) player.x += playerDx;
 
   for (let bullet of bullets){
     if (!bullet.hit){
@@ -94,8 +117,21 @@ function update(delta: number){
     }
   }
 
-  bullets = bullets.filter((bullet) => bullet.y + bullet.h > 0);
- 
+  if (hitLeft || hitRight){
+    enemyDx *= -1;
+    for (let enemy of enemies){
+      enemy.y += ENEMY_DROP;
+    }
+  }
+
+  for (let enemy of enemies){
+    enemy.x += enemyDx * delta
+  }
+
+
+  checkCollisions();
+  bullets = bullets.filter((bullet) => bullet.y + bullet.h > 0 && !bullet.hit);
+  enemies = enemies.filter((enemy) => enemy.alive);
 }
 
 window.addEventListener("keydown", recordDown);
