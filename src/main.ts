@@ -23,8 +23,9 @@ if (!ctx){
 };
 canvas.width = 600, canvas.height = 600;
 
-// initializing game objects variables
+// player variables
 const player: Player = {x: canvas.width/2-5, y: canvas.height-30, w: 20, h: 10, lives: 3};
+const playerSpeed = 400; // pixels per seconds
 const keys: Record<string,boolean> = {
   "KeyA": false,
   "KeyD": false,
@@ -32,12 +33,14 @@ const keys: Record<string,boolean> = {
   "ArrowLeft": false,
   "Space": false,
 };
+
+// bullets variables
 let bullets: Bullet[] = [];
-const playerSpeed = 400; // pixels per seconds
 const bulletSpeed = 200;
 let lastTime = 0;
 let spaceWasDown = false;
 
+// enemies variables
 let enemies: Enemy[] = [];
 let enemyDx = 60;
 const ENEMY_DROP = 20;
@@ -45,6 +48,10 @@ const ENEMY_W = 30, ENEMY_H = 20;
 const ROWS = 5, COLS = 8;
 const OFFSET_X = 40, OFFSET_Y = 40; // margin
 const GAP = 15; // space between enemies
+
+// games variables
+let score = 0;
+let gameState: "playing" | "won" | "lost" = "playing";
 
 for (let row = 0; row < ROWS; row++){
   for (let col = 0; col < COLS; col++){
@@ -75,6 +82,9 @@ function draw(){
       ctx.fillRect(bullet.x, bullet.y, bullet.w, bullet.h);
     }
   };
+  ctx.font = "12px monospace";
+  ctx.fillText(`Score: ${score}`, 10, 20);
+  ctx.fillText(`Lives: ${player.lives}`, canvas.width - 80, 20);
 
   ctx.fillStyle = "lime";
   for (let enemy of enemies){
@@ -97,6 +107,7 @@ function checkCollisions(){
       if (isOverlapping(bullet, enemy)) {
         bullet.hit = true;
         enemy.alive = false;
+        score++;
       }
     }
   }
@@ -134,23 +145,46 @@ function update(delta: number){
   enemies = enemies.filter((enemy) => enemy.alive);
 }
 
+function drawEndScreen(){
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "white";
+  ctx.font = "32px monospace";
+  ctx.textAlign = "center";
+  ctx.fillText(
+    gameState === "won" ? "YOU WIN!" : "GAME OVER",
+    canvas.width/2, canvas.height/2
+  );
+  ctx.font = "16px monospace";
+  ctx.fillText(`Score ${score}`, canvas.width/2, canvas.height/2 + 40);
+  ctx.textAlign = "left";
+}
+
 window.addEventListener("keydown", recordDown);
 window.addEventListener("keyup", recordUp);
 
 function gameLoop(currentTime: number){
+  if (gameState !== "playing"){
+    drawEndScreen();
+    requestAnimationFrame(gameLoop);
+    return;
+  }
+
   if (lastTime == 0) lastTime = currentTime;
   const delta = (currentTime - lastTime) / 1000; // pixels per second
   lastTime = currentTime;
   const spaceDown = keys["Space"];
 
-
   if (spaceDown && !spaceWasDown) {
-    bullets.push({x: player.x + player.w/2, y: player.y, w: 2, h: 5, hit: false});
+    bullets.push({x: player.x + player.w/2, y: player.y, w: 4, h: 8, hit: false});
   };
 
   spaceWasDown = spaceDown;
 
   update(delta);
+
+  if (enemies.length === 0) gameState = "won";
+  if (enemies.some((e) => e.y + e.h >= canvas.height) || player.lives === 0) gameState = "lost";
+ 
   draw();
 
   requestAnimationFrame(gameLoop);
