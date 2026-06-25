@@ -13,6 +13,7 @@ type Size = {
 
 type Player = Location & Size & {lives: number};
 type Enemy = Location & Size & {alive: boolean};
+type Bullet = Location & Size & {hit: boolean};
 
 // intializing game canvas variables
 const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
@@ -31,7 +32,7 @@ const keys: Record<string,boolean> = {
   "ArrowLeft": false,
   "Space": false,
 };
-let bullets: Location[] = [];
+let bullets: Bullet[] = [];
 const playerSpeed = 400; // pixels per seconds
 const bulletSpeed = 200;
 let lastTime = 0;
@@ -62,6 +63,41 @@ function recordUp(e:KeyboardEvent) {
   keys[e.code] = false;
 };
 
+function draw(){
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = "white";
+  ctx.fillRect(player.x, player.y, player.w, player.h);
+  for (let bullet of bullets){
+    if (!bullet.hit){
+      ctx.fillRect(bullet.x, bullet.y, bullet.w, bullet.h);
+    }
+  };
+
+  ctx.fillStyle = "lime";
+  for (let enemy of enemies){
+    if (enemy.alive){
+      ctx.fillRect(enemy.x, enemy.y, enemy.w, enemy.h);
+    }
+  }
+}
+
+function update(delta: number){
+  let dx = 0;
+  if (keys["KeyA"] || keys["ArrowLeft"]) dx -= playerSpeed * delta;
+  if (keys["KeyD"] || keys["ArrowRight"]) dx += playerSpeed * delta;
+  if (player.x + dx >= 0 && player.x + player.w + dx <= canvas.width) player.x += dx;
+
+  for (let bullet of bullets){
+    if (!bullet.hit){
+      bullet.y -= bulletSpeed * delta;
+    }
+  }
+
+  bullets = bullets.filter((bullet) => bullet.y + bullet.h > 0);
+ 
+}
+
 window.addEventListener("keydown", recordDown);
 window.addEventListener("keyup", recordUp);
 
@@ -71,36 +107,15 @@ function gameLoop(currentTime: number){
   lastTime = currentTime;
   const spaceDown = keys["Space"];
 
-  ctx.clearRect(0 , 0, canvas.width, canvas.height);
-
-  let dx = 0;
-  if (keys["KeyA"] || keys["ArrowLeft"]) dx -= playerSpeed * delta;
-  if (keys["KeyD"] || keys["ArrowRight"]) dx += playerSpeed * delta;
-
-  if (player.x + dx >= 0 && player.x + player.w + dx <= canvas.width) player.x += dx;
 
   if (spaceDown && !spaceWasDown) {
-    bullets.push({x: player.x, y: player.y});
+    bullets.push({x: player.x + player.w/2, y: player.y, w: 2, h: 5, hit: false});
   };
 
   spaceWasDown = spaceDown;
 
-  ctx.fillStyle = "white";
-  ctx.fillRect(player.x, player.y, player.w, player.h);
-
-  for (let bullet of bullets) {
-    ctx.fillRect(bullet.x, bullet.y,2, 5);
-    bullet.y -= bulletSpeed * delta;
-  }
-
-  bullets = bullets.filter((bullet) => bullet.y + 5 > 0);
-
-  ctx.fillStyle = "lime";
-  for (let enemy of enemies){
-    if (enemy.alive){
-      ctx.fillRect(enemy.x, enemy.y, enemy.w, enemy.h);
-    }
-  }
+  update(delta);
+  draw();
 
   requestAnimationFrame(gameLoop);
 };
